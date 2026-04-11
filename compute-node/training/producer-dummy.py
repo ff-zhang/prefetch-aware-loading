@@ -69,8 +69,8 @@ def clean_dir(data_dir):
 
 def main():
     ap = argparse.ArgumentParser(description="Streaming shard producer")
-    ap.add_argument('--data-dir',   default=os.environ.get('DATA_DIR', '/mnt/tmpfs'),
-                    help='directory to publish shards into (default: $DATA_DIR or /mnt/tmpfs)')
+    ap.add_argument('--data-dir',   default=os.environ.get('DATA_DIR', '/tmp'),
+                    help='directory to publish shards into (default: $DATA_DIR or /tmp)')
     ap.add_argument('--num-shards', type=int,   default=8,
                     help='number of shards to publish before signaling DONE')
     ap.add_argument('--shard-size', type=int,   default=1000,

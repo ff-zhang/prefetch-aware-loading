@@ -38,7 +38,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 # ── config ───────────────────────────────────────────────────────────────
-DATA_DIR      = os.environ.get('DATA_DIR', '/mnt/tmpfs')
+DATA_DIR      = os.environ.get('DATA_DIR', '/tmp')
 DONE_SENTINEL = os.path.join(DATA_DIR, 'DONE')
 POLL_INTERVAL = 0.01          # seconds to sleep when no shard is available
 VOCAB_SIZE    = 10000
