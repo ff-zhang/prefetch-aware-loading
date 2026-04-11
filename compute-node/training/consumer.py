@@ -109,6 +109,8 @@ def next_shard():
         if shards:
             return shards[0]
         if os.path.exists(DONE_SENTINEL):
+            # delete DONE so that if the consumer is restarted, it doesn't see a stale DONE 
+            os.unlink(DONE_SENTINEL)
             return None
         time.sleep(POLL_INTERVAL)
 
