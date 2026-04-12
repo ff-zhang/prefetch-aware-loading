@@ -39,7 +39,7 @@ Begin by starting the server on the data node:
 ```
 
 The server listens for one client at a time and sends the batch configuration to the connecting agent before pushing batches.
-Note that `batch-size × sample-size` must be less than 4 MiB, the hard-coded ring buffer capacity.
+Note that `batch-size × sample-size` must be less than 1 GiB, the hard-coded ring buffer capacity.
 
 Start the client on the compute node:
 
