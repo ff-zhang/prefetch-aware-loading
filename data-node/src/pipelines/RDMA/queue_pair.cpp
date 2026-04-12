@@ -132,7 +132,7 @@ int QueuePair::bringup(const ibv_qp_info& remote) {
 		attr.ah_attr.grh.hop_limit = 2;
 		attr.ah_attr.grh.traffic_class = 0;
 	}
-	attr.ah_attr.port_num = remote.port_num;
+	attr.ah_attr.port_num = port_num_;
 
 	attr.path_mtu = port_attr.active_mtu;
 	attr.dest_qp_num = remote.qp_num;
