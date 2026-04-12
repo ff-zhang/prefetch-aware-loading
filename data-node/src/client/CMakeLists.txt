@@ -1,5 +1,5 @@
-add_executable(agent agent.cpp)
-target_link_libraries(agent PRIVATE
+add_executable(client client.cpp)
+target_link_libraries(client PRIVATE
   pipelines
   ibverbs
 )

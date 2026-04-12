@@ -1,5 +1,3 @@
-add_subdirectory(frontend)
-
 add_executable(server server.cpp)
 target_link_libraries(server PRIVATE pipelines)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
