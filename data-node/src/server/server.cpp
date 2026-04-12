@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
     const int listen_fd = fdl::listen(listen_addr, 1);
     if (listen_fd < 0) { return 1; }
 
-    FDL_LOG("[server] Listening on 0.0.0.0:%u", port);
+    FDL_LOG("[Server] Listening on 0.0.0.0:%u", port);
 
     while (true) {
         sockaddr_in client_addr{};
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
         const int client_fd = accept(listen_fd, reinterpret_cast<sockaddr*>(&client_addr), &addrlen);
         if (client_fd < 0) { perror("accept"); continue; }
 
-        FDL_LOG("[server] Client connected from %s", fdl::ntop(client_addr).c_str());
+        FDL_LOG("[Server] Client connected from %s", fdl::ntop(client_addr).c_str());
 
         // Send the client the batch dimensions
         if (!fdl::send_all(client_fd, &config, sizeof(config))) {
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
             {view_buf, sizes.view},
         };
         if (qp.initialize(regions) != 0) {
-            FDL_WARN("[server] QP initialize failed");
+            FDL_WARN("[Server] QP initialize failed");
             close(client_fd);
             continue;
         }
@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
 
         // Bring up the QP connection
         if (qp.bringup(client_info) != 0) {
-            FDL_WARN("[server] QP bringup failed");
+            FDL_WARN("[Server] QP bringup failed");
             close(client_fd);
             continue;
         }
