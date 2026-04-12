@@ -5,7 +5,6 @@
 #pragma once
 
 #include "queue_pair.h"
-#include "types.h"
 #include "utils/debug.h"
 #include "utils/parameters/configuration.h"
 #include "utils/ring_buffer.h"

@@ -2,11 +2,11 @@
 // Created by Felix Zhang on 1/8/26.
 //
 
+#include <cassert>
 #include <filesystem>
 
 #include "device.h"
 #include "queue_pair.h"
-#include "utils/buffer_pool.h"
 
 namespace fdl::rdma {
 
