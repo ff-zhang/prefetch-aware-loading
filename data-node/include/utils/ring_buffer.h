@@ -15,6 +15,7 @@
 #include "parameters/configuration.h"
 #include "pause.h"
 #include "types.h"
+#include "utils/endian.h"
 
 namespace fdl {
 
