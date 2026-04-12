@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
         // Set up a local view of the client's ring buffer
         fdl::rdma::ClientUnifiedBuffer view;
         view.initialize(view_buf);
-        view.setup(&qp, data_addr, state_addr, std::make_optional(std::make_pair(&progress_fn, static_cast<void*>(nullptr))));
+        view.setup(&qp, data_addr, state_addr, std::make_optional(std::make_pair(&progress_fn, nullptr)));
 
         // Producer segment descriptors
         const std::array<std::pair<char*, uint32_t>, 2> b_segments{{

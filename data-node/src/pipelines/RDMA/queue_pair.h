@@ -216,7 +216,7 @@ private:
     bool initialized_ = false;
     bool connected_ = false;
 
-    uint8_t gid_ = 0;
+    uint8_t gid_ = GID;
     uint8_t port_num_ = 0;
     uint32_t psn_ = 0;
     int max_rd_atomic_ = 0;
