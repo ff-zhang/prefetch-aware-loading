@@ -61,9 +61,10 @@ int main(int argc, char** argv) {
                 tmpfs = optarg;
                 break;
             }
-            default:
+            default: {
                 FDL_WARN("Usage: agent --ip SERVER_IP --port PORT [--tmpfs PATH]");
                 return EXIT_FAILURE;
+            }
         }
     }
     if (!ip) {
@@ -72,7 +73,7 @@ int main(int argc, char** argv) {
     }
 
     // Allocate the ring buffer that the server will write batches into using RDMA
-    std::unique_ptr<char, decltype(&free)> memory(
+    const std::unique_ptr<char, decltype(&free)> memory(
         static_cast<char*>(aligned_alloc(64, RingBuffer::size_of())), free
     );
     if (!memory) {
@@ -105,7 +106,7 @@ int main(int argc, char** argv) {
 
     const uint32_t length = config.batch_size * config.sample_size;
     if (length == 0 || length >= fdl::CLIENT_BUFFER_SIZE) {
-        FDL_WARN("[Agent] batch_bytes %u out of valid range (0, %zu)", length, fdl::CLIENT_BUFFER_SIZE);
+        FDL_WARN("[Agent] total batch length %u out of valid range (0, %zu)", length, fdl::CLIENT_BUFFER_SIZE);
         close(server_fd);
         return EXIT_FAILURE;
     }
@@ -142,6 +143,7 @@ int main(int argc, char** argv) {
     FDL_LOG("[Agent] RDMA connection established");
 
     // Continuously spin on the ring buffer, copying each batch to tmpfs
+    FDL_LOG("[Agent] Starting consumer loop");
     uint32_t counter = 0;
     auto t0 = std::chrono::steady_clock::now();
     while (true) {
