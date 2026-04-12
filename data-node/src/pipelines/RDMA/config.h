@@ -4,5 +4,5 @@
 
 #pragma once
 
-constexpr char PCIE_ADDRESS[] = "0000:5e:00.1";
+constexpr char PCIE_ADDRESS[] = "0000:5e:00.0";
 constexpr uint8_t GID = 3;
