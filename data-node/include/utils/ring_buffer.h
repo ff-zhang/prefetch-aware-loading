@@ -350,7 +350,7 @@ public:
      */
     std::array<uint32_t, 3> get_consumable(const HostIndex& start, const bool all) const {
         std::array<uint32_t, 3> size{};
-        while (size[0] < CLIENT_BUFFER_COUNT / 2) {
+        while (true) {
             const uint64_t slot = state_->metadata_[(start.m_index + size[2]) % M];
             if (~slot & CONSUME_BIT) {
                 break;

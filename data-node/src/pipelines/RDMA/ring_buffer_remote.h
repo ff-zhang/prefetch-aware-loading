@@ -349,7 +349,6 @@ private:
     std::optional<std::pair<void (*)(void*, void*), void*>> progress_;
 };
 
-using ServerUnifiedBuffer = RingBufferRemote<PARTITION_BUFFER_SIZE, PARTITION_BUFFER_PACKETS>;
 using ClientUnifiedBuffer = RingBufferRemote<CLIENT_BUFFER_SIZE, CLIENT_BUFFER_PACKETS>;
 
 }
