@@ -28,6 +28,7 @@
 using RingBuffer = fdl::RingBuffer<fdl::CLIENT_BUFFER_SIZE, fdl::CLIENT_BUFFER_PACKETS>;
 using BufferHandle = fdl::RingBufferHandle<fdl::CLIENT_BUFFER_SIZE>;
 
+// Message exchanged during TCP handshake so both sides agree on batch dimensions
 struct BatchConfig {
     uint32_t batch_size;
     uint32_t sample_size;
