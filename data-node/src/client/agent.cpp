@@ -36,7 +36,7 @@ struct BatchConfig {
 int main(int argc, char** argv) {
     const char* ip = nullptr;
     uint16_t port = 9000;
-    std::string path = "/dev/shm";
+    std::string tmpfs = "/dev/shm";
 
     static constexpr option options[] = {
         {"ip", required_argument, nullptr, 'i'},
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
                 break;
             }
             case 't': {
-                path = optarg;
+                tmpfs = optarg;
                 break;
             }
             default:
@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
     FDL_LOG("[Agent] RDMA connection established");
 
     // Continuously spin on the ring buffer, copying each batch to tmpfs
-    uint64_t counter = 0;
+    uint32_t counter = 0;
     auto t0 = std::chrono::steady_clock::now();
     while (true) {
         // Busy-wait until the server has written a batch into our buffer
@@ -153,22 +153,22 @@ int main(int argc, char** argv) {
 
         // Determine the destination file for this batch
         char path[512];
-        snprintf(path, sizeof(path), "%s/batch_%04u.bin", path.c_str(), slot);
+        snprintf(path, sizeof(path), "%s/shard_%u.pt", tmpfs.c_str(), counter);
 
-        // Open (or create/truncate) the tmpfs file and write the batch.
+        // Open the tmpfs file and write the batch
         const int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (fd < 0) {
             perror("open");
         } else {
             std::visit(fdl::overloaded{
-                           [&](const fdl::RingBufferRegion& r) {
-                               if (::write(fd, r.data, r.size) < 0) { perror("write"); }
-                           },
-                           [&](const std::array<fdl::RingBufferRegion, 2>& pair) {
-                               if (::write(fd, pair[0].data, pair[0].size) < 0) { perror("write"); }
-                               if (::write(fd, pair[1].data, pair[1].size) < 0) { perror("write"); }
-                           }
-                       }, handle->regions);
+                [&](const fdl::RingBufferRegion& r) {
+                    if (::write(fd, r.data, r.size) < 0) { perror("write"); }
+                },
+                [&](const std::array<fdl::RingBufferRegion, 2>& pair) {
+                    if (::write(fd, pair[0].data, pair[0].size) < 0) { perror("write"); }
+                    if (::write(fd, pair[1].data, pair[1].size) < 0) { perror("write"); }
+                }
+            }, handle->regions);
             close(fd);
         }
 
@@ -177,11 +177,10 @@ int main(int argc, char** argv) {
         ++counter;
 
         if (counter % 100 == 0) {
-            const auto   t1   = std::chrono::steady_clock::now();
+            const auto t1 = std::chrono::steady_clock::now();
             const double secs = std::chrono::duration<double>(t1 - t0).count();
             const double gbps = (100.0 * length) / secs / 1e9;
-            FDL_LOG("[agent] batch=%-8lu  %.3f GB/s  (%.0f batches/s)",
-                    counter, gbps, 100.0 / secs);
+            FDL_LOG("[Agent] batch=%-8u %.3f GB/s (%.0f batches/s)", counter, gbps, 100.0 / secs);
             t0 = t1;
         }
     }
