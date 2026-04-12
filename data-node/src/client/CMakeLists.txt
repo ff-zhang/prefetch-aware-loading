@@ -1,7 +1,5 @@
-add_library(client STATIC
-  agent.cpp
-)
-target_link_libraries(client PUBLIC
+add_executable(agent agent.cpp)
+target_link_libraries(agent PRIVATE
   pipelines
   ibverbs
 )
