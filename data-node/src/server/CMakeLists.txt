@@ -1,4 +1,3 @@
-add_subdirectory(backend)
 add_subdirectory(frontend)
 
 add_executable(server main.cpp)
