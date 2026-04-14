@@ -38,11 +38,13 @@ int main(int argc, char** argv) {
     const char* ip = nullptr;
     uint16_t port = 9000;
     std::string tmpfs = "/dev/shm";
+    uint32_t lookahead = 0;
 
     static constexpr option options[] = {
         {"ip", required_argument, nullptr, 'i'},
         {"port", required_argument, nullptr, 'p'},
         {"tmpfs", required_argument, nullptr, 't'},
+        {"lookahead", required_argument, nullptr, 'l'},
         {nullptr, 0, nullptr, 0}
     };
 
@@ -61,8 +63,12 @@ int main(int argc, char** argv) {
                 tmpfs = optarg;
                 break;
             }
+            case 'l': {
+                lookahead = std::stoul(optarg);
+                break;
+            }
             default: {
-                FDL_WARN("Usage: agent --ip SERVER_IP --port PORT [--tmpfs PATH]");
+                FDL_WARN("Usage: agent --ip SERVER_IP --port PORT [--tmpfs PATH] [--lookahead N]");
                 return EXIT_FAILURE;
             }
         }
@@ -141,9 +147,9 @@ int main(int argc, char** argv) {
     }
 
     FDL_LOG("[Agent] RDMA connection established");
+    FDL_LOG("[Agent] Starting consumer loop");
 
     // Continuously spin on the ring buffer, copying each batch to tmpfs
-    FDL_LOG("[Agent] Starting consumer loop");
     uint32_t counter = 0;
     auto t0 = std::chrono::steady_clock::now();
     while (true) {
@@ -154,11 +160,22 @@ int main(int argc, char** argv) {
             if (!handle) { cpu_pause(); }
         } while (!handle);
 
+        // Check if we are at the file limit
+        if (lookahead != 0 && counter >= lookahead) {
+            char path[512];
+            snprintf(path, sizeof(path), "%s/shard_%u.pt", tmpfs.c_str(), counter - lookahead);
+
+            // Wait until the external process unlinks the oldest file
+            while (::access(path, F_OK) == 0) {
+                cpu_pause();
+            }
+        }
+
         // Determine the destination file for this batch
         char path[512];
         snprintf(path, sizeof(path), "%s/shard_%u.pt", tmpfs.c_str(), counter);
 
-        // Open the tmpfs file and write the batch
+        // Write the batch into the tmpfs file
         const int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (fd < 0) {
             perror("open");
