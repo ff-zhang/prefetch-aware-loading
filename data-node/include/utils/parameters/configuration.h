@@ -15,7 +15,7 @@ namespace fdl {
 // IP addresses of the servers in the cluster
 constexpr std::array<const char*, 2> SERVER_IPS = {"10.10.1.1",  "10.10.1.2"};
 
-constexpr size_t CLIENT_BUFFER_SIZE = 4 * MiB;
+constexpr size_t CLIENT_BUFFER_SIZE = 1 * MiB;
 constexpr size_t CLIENT_BUFFER_PACKETS = CLIENT_BUFFER_SIZE / 1024;
 
 }
