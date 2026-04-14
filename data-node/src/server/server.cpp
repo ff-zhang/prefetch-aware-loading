@@ -47,7 +47,7 @@ static constexpr size_t align_up(const size_t n, const size_t a) {
 
 int main(int argc, char** argv) {
     uint16_t port = 9000;
-    BatchConfig config{64, 8 * SEQ_LEN + 1};
+    BatchConfig config{64, 8 * (SEQ_LEN + 1)};
 
     static constexpr option options[] = {
         {"port", required_argument, nullptr, 'p'},
