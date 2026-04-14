@@ -118,107 +118,110 @@ int main(int argc, char** argv) {
 
     FDL_LOG("[Server] Listening on 0.0.0.0:%u", port);
 
-    while (true) {
-        sockaddr_in client_addr{};
-        socklen_t addrlen = sizeof(client_addr);
-        const int client_fd = accept(listen_fd, reinterpret_cast<sockaddr*>(&client_addr), &addrlen);
-        if (client_fd < 0) { perror("accept"); continue; }
-
-        FDL_LOG("[Server] Client connected from %s", fdl::ntop(client_addr).c_str());
-
-        // Send the client the batch dimensions
-        if (!fdl::send_all(client_fd, &config, sizeof(config))) {
-            close(client_fd); continue;
-        }
-
-        // Create QP and register memory regions.
-        fdl::rdma::QueuePair qp;
-        const std::vector<std::pair<char*, size_t>> regions = {
-            {ring_buf, sizes.unified},
-            {scratch_buf, sizes.scratch},
-            {view_buf, sizes.view},
-        };
-        if (qp.initialize(regions) != 0) {
-            FDL_WARN("[Server] QP initialize failed");
-            close(client_fd);
-            continue;
-        }
-
-        // Receive the client's QP info
-        fdl::rdma::ibv_qp_info client_info{};
-        if (!fdl::recv_all(client_fd, &client_info, sizeof(client_info))) {
-            close(client_fd);
-            continue;
-        }
-
-        // Send the server's QP info.
-        const fdl::rdma::ibv_qp_info server_info = qp.materialize();
-        if (!fdl::send_all(client_fd, &server_info, sizeof(server_info))) {
-            close(client_fd);
-            continue;
-        }
-
-        // Bring up the QP connection
-        if (qp.bringup(client_info) != 0) {
-            FDL_WARN("[Server] QP bringup failed");
-            close(client_fd);
-            continue;
-        }
-
-        // Derive remote ring buffer addresses from the client's information
-        // The client registers its ring buffer as its unified MR and RingBuffer<N,M>::initialize() places its state at offset N
-        const uint64_t data_addr  = client_info.addr[fdl::rdma::UNIFIED];
-        const uint64_t state_addr = data_addr + fdl::CLIENT_BUFFER_SIZE;
-
-        // Set up a local view of the client's ring buffer
-        fdl::rdma::ClientUnifiedBuffer view;
-        view.initialize(view_buf);
-        view.setup(&qp, data_addr, state_addr, std::make_optional(std::make_pair(&progress_fn, nullptr)));
-
-        // Producer segment descriptors
-        const std::array<std::pair<char*, uint32_t>, 2> b_segments{{
-            {ring_buf, length}, {nullptr,    0u}
-        }};
-        const std::array<std::pair<uint64_t*, uint32_t>, 2> m_segments{{
-            {metadata, 1u}, {nullptr,   0u}
-        }};
-
-        std::array<bool, 2 * fdl::rdma::MAX_CQE> contexts{};
-        bool context = false;
-
-        FDL_LOG("[Server] Starting producer loop");
-        uint32_t counter = 0;
-        auto t0 = std::chrono::steady_clock::now();
-        while (true) {
-            // Write a distinguishable dummy pattern into the batch buffer
-            memset(ring_buf, static_cast<int>(counter & 0xFF), length);
-
-            // Push the batch into the client's ring buffer via one-sided RDMA
-            std::optional<uint64_t> ticket;
-            do {
-                context = false;
-                ticket = view.produce_async(b_segments, m_segments, 1, fdl::rdma::UNIFIED, contexts, context);
-                if (!ticket) { qp.poll_reclaim(); }
-            } while (!ticket);
-
-            // Wait for all RDMA writes for this batch to complete.
-            qp.await(*ticket, [](fdl::rdma::QueuePair* qp_) -> void {
-                qp_->poll_reclaim();
-            });
-
-            ++counter;
-            if (counter % 100 == 0) {
-                const auto t1 = std::chrono::steady_clock::now();
-                const double secs = std::chrono::duration<double>(t1 - t0).count();
-                const double gbps = (100.0 * length) / secs / 1e9;
-                FDL_LOG("[Server] batch=%-8u %.3f GB/s  (%.0f batches/s)", counter, gbps, 100.0 / secs);
-                t0 = t1;
-            }
-        }
-
-        close(client_fd);
+    sockaddr_in client_addr{};
+    socklen_t addrlen = sizeof(client_addr);
+    const int client_fd = accept(listen_fd, reinterpret_cast<sockaddr*>(&client_addr), &addrlen);
+    if (client_fd < 0) {
+        perror("accept");
+        return EXIT_FAILURE;
     }
 
     close(listen_fd);
-    return 0;
+
+    FDL_LOG("[Server] Client connected from %s", fdl::ntop(client_addr).c_str());
+
+    // Send the client the batch dimensions
+    if (!fdl::send_all(client_fd, &config, sizeof(config))) {
+        close(client_fd);
+        return EXIT_FAILURE;
+    }
+
+    // Create QP and register memory regions.
+    fdl::rdma::QueuePair qp;
+    const std::vector<std::pair<char*, size_t>> regions = {
+        {ring_buf, sizes.unified},
+        {scratch_buf, sizes.scratch},
+        {view_buf, sizes.view},
+    };
+    if (qp.initialize(regions) != 0) {
+        FDL_WARN("[Server] QP initialize failed");
+        close(client_fd);
+        return EXIT_FAILURE;
+    }
+
+    // Receive the client's QP info
+    fdl::rdma::ibv_qp_info client_info{};
+    if (!fdl::recv_all(client_fd, &client_info, sizeof(client_info))) {
+        close(client_fd);
+        return EXIT_FAILURE;
+    }
+
+    // Send the server's QP info.
+    const fdl::rdma::ibv_qp_info server_info = qp.materialize();
+    if (!fdl::send_all(client_fd, &server_info, sizeof(server_info))) {
+        close(client_fd);
+        return EXIT_FAILURE;
+    }
+
+    // Bring up the QP connection
+    if (qp.bringup(client_info) != 0) {
+        FDL_WARN("[Server] QP bringup failed");
+        close(client_fd);
+        return EXIT_FAILURE;
+    }
+
+    // Derive remote ring buffer addresses from the client's information
+    // The client registers its ring buffer as its unified MR and RingBuffer<N,M>::initialize() places its state at offset N
+    const uint64_t data_addr  = client_info.addr[fdl::rdma::UNIFIED];
+    const uint64_t state_addr = data_addr + fdl::CLIENT_BUFFER_SIZE;
+
+    // Set up a local view of the client's ring buffer
+    fdl::rdma::ClientUnifiedBuffer view;
+    view.initialize(view_buf);
+    view.setup(&qp, data_addr, state_addr, std::make_optional(std::make_pair(&progress_fn, nullptr)));
+
+    // Producer segment descriptors
+    const std::array<std::pair<char*, uint32_t>, 2> b_segments{{
+        {ring_buf, length}, {nullptr,    0u}
+    }};
+    const std::array<std::pair<uint64_t*, uint32_t>, 2> m_segments{{
+        {metadata, 1u}, {nullptr,   0u}
+    }};
+
+    std::array<bool, 2 * fdl::rdma::MAX_CQE> contexts{};
+    bool context = false;
+
+    FDL_LOG("[Server] Starting producer loop");
+    uint32_t counter = 0;
+    auto t0 = std::chrono::steady_clock::now();
+    while (counter < 1000) {
+        // Write a distinguishable dummy pattern into the batch buffer
+        memset(ring_buf, static_cast<int>(counter & 0xFF), length);
+
+        // Push the batch into the client's ring buffer via one-sided RDMA
+        std::optional<uint64_t> ticket;
+        do {
+            context = false;
+            ticket = view.produce_async(b_segments, m_segments, 1, fdl::rdma::UNIFIED, contexts, context);
+            if (!ticket) { qp.poll_reclaim(); }
+        } while (!ticket);
+
+        // Wait for all RDMA writes for this batch to complete.
+        qp.await(*ticket, [](fdl::rdma::QueuePair* qp_) -> void {
+            qp_->poll_reclaim();
+        });
+
+        ++counter;
+        if (counter % 100 == 0) {
+            const auto t1 = std::chrono::steady_clock::now();
+            const double secs = std::chrono::duration<double>(t1 - t0).count();
+            const double gbps = (100.0 * length) / secs / 1e9;
+            FDL_LOG("[Server] batch=%-8u %.3f GB/s  (%.0f batches/s)", counter, gbps, 100.0 / secs);
+            t0 = t1;
+        }
+    }
+
+    close(client_fd);
+
+    return EXIT_SUCCESS;
 }

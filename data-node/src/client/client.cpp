@@ -175,15 +175,7 @@ int main(int argc, char** argv) {
     // Continuously spin on the ring buffer, copying each batch to tmpfs
     uint32_t counter = 0;
     auto t0 = std::chrono::steady_clock::now();
-    while (true) {
-        // Check if the producer has signaled completion
-        auto done = tmpfs + "/DONE";
-        if (access(done.c_str(), F_OK) == 0) {
-            FDL_LOG("[Agent] DONE file detected. Shutting down consumer.");
-            unlink(done.c_str());
-            break;
-        }
-
+    while (counter < 1000) {
         // Busy-wait until the server has written a batch into our buffer
         std::optional<BufferHandle> handle;
         do {
@@ -244,5 +236,13 @@ int main(int argc, char** argv) {
     }
 
     close(server_fd);
+
+    // Check if the producer has signaled completion
+    auto done = tmpfs + "/DONE";
+    const int fd = open(done.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        perror("open");
+    }
+
     return 0;
 }
