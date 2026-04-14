@@ -25,6 +25,7 @@
 #include "utils/ring_buffer.h"
 #include "utils/socket.h"
 
+constexpr size_t BATCH_COUNT = 100;
 constexpr size_t SEQ_LEN = 1000;
 
 using RingBuffer = fdl::RingBuffer<fdl::CLIENT_BUFFER_SIZE, fdl::CLIENT_BUFFER_PACKETS>;
@@ -194,7 +195,7 @@ int main(int argc, char** argv) {
     FDL_LOG("[Server] Starting producer loop");
     uint32_t counter = 0;
     auto t0 = std::chrono::steady_clock::now();
-    while (counter < 1000) {
+    while (counter < BATCH_COUNT) {
         // Write a distinguishable dummy pattern into the batch buffer
         memset(ring_buf, static_cast<int>(counter & 0xFF), length);
 
@@ -212,7 +213,7 @@ int main(int argc, char** argv) {
         });
 
         ++counter;
-        if (counter % 100 == 0) {
+        if (counter % 10 == 0) {
             const auto t1 = std::chrono::steady_clock::now();
             const double secs = std::chrono::duration<double>(t1 - t0).count();
             const double gbps = (100.0 * length) / secs / 1e9;

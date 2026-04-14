@@ -26,6 +26,8 @@
 #include "utils/socket.h"
 #include "utils/types.h"
 
+constexpr size_t BATCH_COUNT = 100;
+
 using RingBuffer = fdl::RingBuffer<fdl::CLIENT_BUFFER_SIZE, fdl::CLIENT_BUFFER_PACKETS>;
 using BufferHandle = fdl::RingBufferHandle<fdl::CLIENT_BUFFER_SIZE>;
 
@@ -175,7 +177,7 @@ int main(int argc, char** argv) {
     // Continuously spin on the ring buffer, copying each batch to tmpfs
     uint32_t counter = 0;
     auto t0 = std::chrono::steady_clock::now();
-    while (counter < 1000) {
+    while (counter < BATCH_COUNT) {
         // Busy-wait until the server has written a batch into our buffer
         std::optional<BufferHandle> handle;
         do {
@@ -226,7 +228,7 @@ int main(int argc, char** argv) {
         buffer.release(std::move(*handle));
         ++counter;
 
-        if (counter % 100 == 0) {
+        if (counter % 10 == 0) {
             const auto t1 = std::chrono::steady_clock::now();
             const double secs = std::chrono::duration<double>(t1 - t0).count();
             const double gbps = (100.0 * length) / secs / 1e9;
