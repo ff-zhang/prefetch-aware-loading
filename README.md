@@ -38,7 +38,7 @@ Begin by starting the server on the data node:
 ./cmake-build-release/src/server/server \
     --port 9000 \
     --batch-size 64 \
-    --sample-size 8008
+    --sample-size 8200
 ```
 
 The server listens for one client at a time and sends the batch configuration to the connecting agent before pushing batches.
