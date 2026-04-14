@@ -232,7 +232,7 @@ int main(int argc, char** argv) {
             const auto t1 = std::chrono::steady_clock::now();
             const double secs = std::chrono::duration<double>(t1 - t0).count();
             const double mbps = (100.0 * length) / secs / 1e6;
-            FDL_LOG("[Server] batch=%-8u %.3f GB/s  (%.0f batches/s)", counter, mbps, 100.0 / secs);
+            FDL_LOG("[Server] batch=%-8u %.3f MB/s  (%.0f batches/s)", counter, mbps, 100.0 / secs);
             t0 = t1;
         }
     }
