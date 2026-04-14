@@ -15,8 +15,11 @@ git submodule update --init --recursive
 - Linux host with RDMA-capable NIC and the `libibverbs` development headers
 - tmpfs mount on the compute node
 - CMake ≥ 3.22 and a C++20-capable compiler
+- Python ≥ 3.10
 
-### Building
+### Setting Up & Building
+
+Install all the Python dependencies in [requirements.txt](requirements.txt) in your virtual environment.
 
 To build all the applications, use the following commands:
 ```bash
