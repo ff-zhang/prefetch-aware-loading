@@ -1,5 +1,5 @@
 # PADL
-Pronounced *paddle*, this is (a proof-of-concept for) a **P**CIe-**A**ware **D**ata-**L**oader.
+Pronounced *paddle*, this is (a proof-of-concept for) a **P**refetch-**A**ware **D**ata-**L**oader.
 It targets ML training workloads within PyTorch.
 
 ## Getting Started
