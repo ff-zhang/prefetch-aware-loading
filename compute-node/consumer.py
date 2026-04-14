@@ -309,15 +309,15 @@ def main():
         h2d_hist.append(h2d_s     * 1000.0)
         train_hist.append(train_s * 1000.0)
 
-        print(
-            f"{shard_idx:>4} {os.path.basename(path):<20} "
-            f"{human_bytes(nbytes):>10} "
-            f"{wait_s*1000:>9.1f} {load_s*1000:>9.1f} "
-            f"{pin_s*1000:>8.1f} {h2d_s*1000:>8.1f} "
-            f"{train_s*1000:>9.1f} "
-            f"{avg_loss:>7.4f} {correct/max(n,1):>6.3f}",
-            flush=True,
-        )
+        # print(
+        #     f"{shard_idx:>4} {os.path.basename(path):<20} "
+        #     f"{human_bytes(nbytes):>10} "
+        #     f"{wait_s*1000:>9.1f} {load_s*1000:>9.1f} "
+        #     f"{pin_s*1000:>8.1f} {h2d_s*1000:>8.1f} "
+        #     f"{train_s*1000:>9.1f} "
+        #     f"{avg_loss:>7.4f} {correct/max(n,1):>6.3f}",
+        #     flush=True,
+        # )
 
     wall = time.perf_counter() - t_run_start
 
