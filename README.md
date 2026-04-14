@@ -38,7 +38,7 @@ Begin by starting the server on the data node:
 ./cmake-build-release/src/server/server \
     --port 9000 \
     --batch-size 64 \
-    --sample-size 520
+    --sample-size 8008
 ```
 
 The server listens for one client at a time and sends the batch configuration to the connecting agent before pushing batches.
@@ -51,7 +51,7 @@ Start the client on the compute node:
     --ip <DATA_NODE_IP> \
     --port 9000 \
     --tmpfs /dev/shm \
-    --lookahead 256
+    --lookahead 32
 ```
 
 Each received batch is written to `<tmpfs>/shard_<N>.pt`, starting from 0 and incrementing each time.

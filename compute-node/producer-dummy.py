@@ -21,7 +21,7 @@ import torch
 
 # Fixed dataset shape. Must match the consumer.
 VOCAB_SIZE  = 10000
-SEQ_LEN     = 64
+SEQ_LEN     = 1000
 NUM_CLASSES = 2
 
 
@@ -73,7 +73,7 @@ def main():
                     help='directory to publish shards into (default: $DATA_DIR or /dev/shm)')
     ap.add_argument('--num-shards', type=int,   default=8,
                     help='number of shards to publish before signaling DONE')
-    ap.add_argument('--shard-size', type=int,   default=1000,
+    ap.add_argument('--shard-size', type=int,   default=64,
                     help='samples per shard')
     ap.add_argument('--interval',   type=float, default=0.5,
                     help='seconds to sleep between successive shard publishes')

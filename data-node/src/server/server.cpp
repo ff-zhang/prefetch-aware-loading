@@ -25,7 +25,7 @@
 #include "utils/ring_buffer.h"
 #include "utils/socket.h"
 
-constexpr size_t SEQ_LEN = 64;
+constexpr size_t SEQ_LEN = 1000;
 
 using RingBuffer = fdl::RingBuffer<fdl::CLIENT_BUFFER_SIZE, fdl::CLIENT_BUFFER_PACKETS>;
 
