@@ -153,6 +153,7 @@ int main(int argc, char** argv) {
     uint32_t counter = 0;
     auto t0 = std::chrono::steady_clock::now();
     while (true) {
+        // Check if the producer has signaled completion
         auto done = tmpfs + "/DONE";
         if (access(done.c_str(), F_OK) == 0) {
             FDL_LOG("[Agent] DONE file detected. Shutting down consumer.");
