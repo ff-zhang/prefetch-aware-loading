@@ -43,6 +43,7 @@ Producer contract
 
 import glob
 import os
+import re
 import statistics
 import time
 
@@ -113,18 +114,23 @@ def next_shard():
     """
     Block until a shard is available or DONE is signaled.
     Returns the shard path, or None if the stream is finished.
-
-    The ordering of checks matters: we look for shards first and only then
-    check for DONE. That way, if the producer writes the final shards and
-    immediately publishes DONE, we still drain everything before exiting.
     """
     while True:
-        shards = sorted(glob.glob(os.path.join(DATA_DIR, 'shard_*.pt')))
-        if shards:
+        # Get all shard files
+        raw_shards = glob.glob(os.path.join(DATA_DIR, 'shard_*.pt'))
+        if raw_shards:
+            # Sort by extracting the integer between 'shard_' and '.pt'
+            shards = sorted(
+                raw_shards,
+                key=lambda x: int(re.search(r'shard_(\d+)\.pt', x).group(1))
+            )
             return shards[0]
+
         if os.path.exists(DONE_SENTINEL):
+            # Only delete sentinel if we are truly finished
             os.unlink(DONE_SENTINEL)
             return None
+
         time.sleep(POLL_INTERVAL)
 
 
