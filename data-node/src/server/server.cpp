@@ -25,6 +25,8 @@
 #include "utils/ring_buffer.h"
 #include "utils/socket.h"
 
+constexpr size_t SEQ_LEN = 64;
+
 using RingBuffer = fdl::RingBuffer<fdl::CLIENT_BUFFER_SIZE, fdl::CLIENT_BUFFER_PACKETS>;
 
 // Message exchanged during TCP handshake so both sides agree on batch dimensions
@@ -45,7 +47,7 @@ static constexpr size_t align_up(const size_t n, const size_t a) {
 
 int main(int argc, char** argv) {
     uint16_t port = 9000;
-    BatchConfig config{32, 4096};
+    BatchConfig config{64, 8 * SEQ_LEN + 1};
 
     static constexpr option options[] = {
         {"port", required_argument, nullptr, 'p'},
