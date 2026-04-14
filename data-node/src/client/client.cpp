@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
                 const std::string filename = entry.path().filename().string();
             
                 // Remove the DONE signal or any shard files
-                if (filename == "DONE" || (filename.find("shard_") == 0 && filename.ends_with(".pt"))) {
+                if (filename == "DONE" || (filename.find("shard_") == 0 && (filename.ends_with(".pt") || filename.ends_with(".pt.tmp")))) {
                     std::filesystem::remove(entry.path());
                     count++;
                 }
@@ -203,11 +203,11 @@ int main(int argc, char** argv) {
         }
 
         // Determine the destination file for this batch
-        char path[512];
-        snprintf(path, sizeof(path), "%s/shard_%u.pt", tmpfs.c_str(), counter);
+        char temp[512];
+        snprintf(temp, sizeof(temp), "%s/shard_%u.tmp", tmpfs.c_str(), counter);
 
         // Write the batch into the tmpfs file
-        const int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        const int fd = open(temp, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (fd < 0) {
             perror("open");
         } else {
@@ -220,8 +220,12 @@ int main(int argc, char** argv) {
                     if (::write(fd, pair[1].data, pair[1].size) < 0) { perror("write"); }
                 }
             }, handle->regions);
-            close(fd);
+            ::close(fd);
         }
+
+        char final[512];
+        snprintf(final, sizeof(final), "%s/shard_%u.pt.tmp", tmpfs.c_str(), counter);
+        ::rename(temp, final);
 
         // Release the consumed slot back to the ring buffer.
         buffer.release(std::move(*handle));
