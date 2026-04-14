@@ -44,7 +44,7 @@ Note that `batch-size × sample-size` must be less than 1 GiB, the hard-coded ri
 Start the client on the compute node:
 
 ```bash
-./cmake-build-release/src/client/agent \
+./cmake-build-release/src/client/client \
     --ip <DATA_NODE_IP> \
     --port 9000 \
     --tmpfs /dev/shm
