@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -147,6 +148,28 @@ int main(int argc, char** argv) {
     }
 
     FDL_LOG("[Agent] RDMA connection established");
+    
+    FDL_LOG("[Agent] Initializing tmpfs at %s", tmpfs.c_str());
+    try {
+        if (std::filesystem::exists(tmpfs) && std::filesystem::is_directory(tmpfs)) {
+            uint32_t count = 0;
+            for (const auto& entry : std::filesystem::directory_iterator(tmpfs)) {
+                const std::string filename = entry.path().filename().string();
+            
+                // Remove the DONE signal or any shard files
+                if (filename == "DONE" || (filename.find("shard_") == 0 && filename.ends_with(".pt"))) {
+                    std::filesystem::remove(entry.path());
+                    count++;
+                }
+            }
+            if (count > 0) {
+                FDL_LOG("[Agent] Purged %u leftover files from previous session", count);
+            }
+        }
+    } catch (const std::filesystem::filesystem_error& e) {
+        FDL_WARN("[Agent] Error during startup cleanup: %s", e.what());
+    }
+    
     FDL_LOG("[Agent] Starting consumer loop");
 
     // Continuously spin on the ring buffer, copying each batch to tmpfs
