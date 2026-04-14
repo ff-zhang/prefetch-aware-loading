@@ -157,7 +157,7 @@ def load_and_stage_shard(path):
 
     # ── 1. host load ────────────────────────────────────────────────────
     t0 = time.perf_counter()
-    data = torch.load(path, weights_only=True, map_location='cpu')
+    data = torch.load(path, weights_only=False, map_location='cpu')
     X_host, y_host = data['X'], data['y']
     load_s = time.perf_counter() - t0
 
