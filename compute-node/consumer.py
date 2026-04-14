@@ -164,8 +164,8 @@ def load_and_stage_shard(path):
 
     # Reconstruct X and y based on your expected shard structure
     n_elements_x = BATCH_SIZE * SEQ_LEN
-    X_host = data[:n_elements_x].view(BATCH_SIZE, SEQ_LEN)
-    y_host = data[n_elements_x : n_elements_x + BATCH_SIZE].view(BATCH_SIZE)
+    X_host = data[:n_elements_x].view(BATCH_SIZE, SEQ_LEN) % VOCAB_SIZE
+    y_host = data[n_elements_x : n_elements_x + BATCH_SIZE].view(BATCH_SIZE) % NUM_CLASSES
 
     load_s = time.perf_counter() - t0
 
