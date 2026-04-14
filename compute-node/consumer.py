@@ -157,8 +157,16 @@ def load_and_stage_shard(path):
 
     # ── 1. host load ────────────────────────────────────────────────────
     t0 = time.perf_counter()
-    data = torch.load(path, weights_only=False, map_location='cpu')
-    X_host, y_host = data['X'], data['y']
+
+    # Read the raw bytes from tmpfs
+    # We use numpy as an intermediary because it's extremely efficient at raw I/O
+    raw_data = torch.from_file(path, shared=False, size=nbytes // 8, dtype=torch.int64)
+
+    # Reconstruct X and y based on your expected shard structure
+    n_elements_x = BATCH_SIZE * SEQ_LEN
+    X_host = raw_data[:n_elements_x].view(BATCH_SIZE, SEQ_LEN)
+    y_host = raw_data[n_elements_x : n_elements_x + BATCH_SIZE].view(BATCH_SIZE)
+
     load_s = time.perf_counter() - t0
 
     pin_s, h2d_s = 0.0, 0.0
