@@ -153,6 +153,13 @@ int main(int argc, char** argv) {
     uint32_t counter = 0;
     auto t0 = std::chrono::steady_clock::now();
     while (true) {
+        auto done = tmpfs + "/DONE";
+        if (access(done.c_str(), F_OK) == 0) {
+            FDL_LOG("[Agent] DONE file detected. Shutting down consumer.");
+            unlink(done.c_str());
+            break;
+        }
+
         // Busy-wait until the server has written a batch into our buffer
         std::optional<BufferHandle> handle;
         do {
