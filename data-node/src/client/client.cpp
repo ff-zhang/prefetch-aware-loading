@@ -193,18 +193,21 @@ int main(int argc, char** argv) {
 
         // Check if we are at the file limit
         if (lookahead != 0 && counter >= lookahead) {
-            char path[512];
-            snprintf(path, sizeof(path), "%s/shard_%u.pt", tmpfs.c_str(), counter - lookahead);
+            char temp[512];
+            snprintf(temp, sizeof(temp), "%s/shard_%u.pt", tmpfs.c_str(), counter - lookahead);
+
+            char final[512];
+            snprintf(final, sizeof(final), "%s/shard_%u.pt", tmpfs.c_str(), counter - lookahead);
 
             // Wait until the external process unlinks the oldest file
-            while (::access(path, F_OK) == 0) {
+            while (::access(temp, F_OK) == 0 || ::access(final, F_OK) == 0) {
                 cpu_pause();
             }
         }
 
         // Determine the destination file for this batch
         char temp[512];
-        snprintf(temp, sizeof(temp), "%s/shard_%u.tmp", tmpfs.c_str(), counter);
+        snprintf(temp, sizeof(temp), "%s/shard_%u.pt.tmp", tmpfs.c_str(), counter);
 
         // Write the batch into the tmpfs file
         const int fd = open(temp, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -224,7 +227,7 @@ int main(int argc, char** argv) {
         }
 
         char final[512];
-        snprintf(final, sizeof(final), "%s/shard_%u.pt.tmp", tmpfs.c_str(), counter);
+        snprintf(final, sizeof(final), "%s/shard_%u.pt", tmpfs.c_str(), counter);
         ::rename(temp, final);
 
         // Release the consumed slot back to the ring buffer.
