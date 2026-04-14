@@ -47,7 +47,8 @@ Start the client on the compute node:
 ./cmake-build-release/src/client/client \
     --ip <DATA_NODE_IP> \
     --port 9000 \
-    --tmpfs /dev/shm
+    --tmpfs /dev/shm \
+    --lookahead 256
 ```
 
 Each received batch is written to `<tmpfs>/shard_<N>.pt`, starting from 0 and incrementing each time.
