@@ -41,6 +41,7 @@ Producer contract
 - Shards are consumed in filename-sorted order.
 """
 
+import argparse
 import glob
 import os
 import re
@@ -60,7 +61,7 @@ SEQ_LEN       = 1024
 EMBED_DIM     = 128
 HIDDEN_DIM    = 256
 NUM_CLASSES   = 2
-BATCH_SIZE    = 64
+BATCH_SIZE    = 1000          # default; overridden by --batch-size
 LR            = 1e-3
 DEVICE        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 USE_CUDA      = (DEVICE.type == 'cuda')
@@ -134,10 +135,15 @@ def next_shard():
         time.sleep(POLL_INTERVAL)
 
 
-def load_and_stage_shard(path):
+def load_and_stage_shard(path, consumer_stall=False):
     """
     Load a shard, copy it onto the GPU, confirm the copy is finished, and
     only then unlink the source file from tmpfs.
+
+    If consumer_stall is True, skip reading the file and generate random
+    tensors of shape [BATCH_SIZE, SEQ_LEN] / [BATCH_SIZE] directly. The
+    file is still unlinked at the end so the consumer stays in sync with
+    the producer's cadence.
 
     Why this ordering matters
     -------------------------
@@ -164,14 +170,21 @@ def load_and_stage_shard(path):
     # ── 1. host load ────────────────────────────────────────────────────
     t0 = time.perf_counter()
 
-    # Read the raw bytes from tmpfs
-    # We use numpy as an intermediary because it's extremely efficient at raw I/O
-    data = torch.from_file(path, shared=False, size=nbytes // 8, dtype=torch.int64)
+    if consumer_stall:
+        # Skip file I/O entirely; generate random tensors of the expected shape.
+        X_host = torch.randint(0, VOCAB_SIZE, (BATCH_SIZE, SEQ_LEN))
+        y_host = torch.randint(0, NUM_CLASSES, (BATCH_SIZE,))
+        # stall for some time here:
+        time.sleep(0.1)  # simulate some I/O delay
+    else:
+        # Read the raw bytes from tmpfs
+        # We use numpy as an intermediary because it's extremely efficient at raw I/O
+        data = torch.from_file(path, shared=False, size=nbytes // 8, dtype=torch.int64)
 
-    # Reconstruct X and y based on your expected shard structure
-    n_elements_x = BATCH_SIZE * SEQ_LEN
-    X_host = data[:n_elements_x].view(BATCH_SIZE, SEQ_LEN) % VOCAB_SIZE
-    y_host = data[n_elements_x : n_elements_x + BATCH_SIZE].view(BATCH_SIZE) % NUM_CLASSES
+        # Reconstruct X and y based on your expected shard structure
+        n_elements_x = BATCH_SIZE * SEQ_LEN
+        X_host = data[:n_elements_x].view(BATCH_SIZE, SEQ_LEN) % VOCAB_SIZE
+        y_host = data[n_elements_x : n_elements_x + BATCH_SIZE].view(BATCH_SIZE) % NUM_CLASSES
 
     load_s = time.perf_counter() - t0
 
@@ -217,7 +230,9 @@ def load_and_stage_shard(path):
     # Drop host references explicitly. On GPU runs the pinned host buffers
     # can be freed immediately. On CPU runs X_host and y_host are aliases
     # of X_dev and y_dev, so this just decrements an extra refcount.
-    del X_host, y_host, data
+    if not consumer_stall:
+        del data
+    del X_host, y_host
 
     return X_dev, y_dev, nbytes, load_s, pin_s, h2d_s
 
@@ -250,10 +265,21 @@ def train_on_shard(model, optimizer, loss_fn, X_dev, y_dev):
         correct    += (out.argmax(1) == y_batch).sum().item()
         total      += y_batch.size(0)
     return shard_loss / max(total, 1), correct, total
+    # return 1, 1, 1
 
 
 # ── main ─────────────────────────────────────────────────────────────────
 def main():
+    ap = argparse.ArgumentParser(description="Streaming shard consumer")
+    ap.add_argument('--consumer-stall', action='store_true',
+                    help='skip file I/O and generate random data instead of reading shards')
+    ap.add_argument('--batch-size', type=int, default=1000,
+                    help='samples per shard batch (default: 1000)')
+    args = ap.parse_args()
+
+    global BATCH_SIZE
+    BATCH_SIZE = args.batch_size
+
     model     = TextClassifier().to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     loss_fn   = nn.CrossEntropyLoss()
@@ -262,7 +288,9 @@ def main():
     # ── banner ───────────────────────────────────────────────────────────
     print("=" * 104, flush=True)
     print(f"CONSUMER  device={DEVICE}  dir={DATA_DIR}  "
-          f"batch={BATCH_SIZE}  params={n_params:,}", flush=True)
+          f"batch={BATCH_SIZE}  params={n_params:,}"
+          + ("  [consumer-stall: data generated locally]" if args.consumer_stall else ""),
+          flush=True)
     print("=" * 104, flush=True)
     print(f"{'idx':>4} {'file':<20} {'bytes':>10} "
           f"{'wait_ms':>9} {'load_ms':>9} {'pin_ms':>8} {'h2d_ms':>8} "
@@ -285,7 +313,9 @@ def main():
             break
 
         # ── 2. load + stage to GPU + unlink (in that order) ─────────────
-        X_dev, y_dev, nbytes, load_s, pin_s, h2d_s = load_and_stage_shard(path)
+        X_dev, y_dev, nbytes, load_s, pin_s, h2d_s = load_and_stage_shard(
+            path, consumer_stall=args.consumer_stall
+        )
 
         # ── 3. train ────────────────────────────────────────────────────
         t_train_start = time.perf_counter()
