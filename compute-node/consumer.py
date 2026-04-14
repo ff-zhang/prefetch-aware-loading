@@ -239,18 +239,17 @@ def train_on_shard(model, optimizer, loss_fn, X_dev, y_dev):
     )
     model.train()
     shard_loss, correct, total = 0.0, 0, 0
-    # for X_batch, y_batch in loader:
-    #     # Tensors are already on DEVICE; no .to() call is needed.
-    #     optimizer.zero_grad()
-    #     out  = model(X_batch)
-    #     loss = loss_fn(out, y_batch)
-    #     loss.backward()
-    #     optimizer.step()
-    #     shard_loss += loss.item() * y_batch.size(0)
-    #     correct    += (out.argmax(1) == y_batch).sum().item()
-    #     total      += y_batch.size(0)
-    # return shard_loss / max(total, 1), correct, total
-    return 1, 1, 1
+    for X_batch, y_batch in loader:
+        # Tensors are already on DEVICE; no .to() call is needed.
+        optimizer.zero_grad()
+        out  = model(X_batch)
+        loss = loss_fn(out, y_batch)
+        loss.backward()
+        optimizer.step()
+        shard_loss += loss.item() * y_batch.size(0)
+        correct    += (out.argmax(1) == y_batch).sum().item()
+        total      += y_batch.size(0)
+    return shard_loss / max(total, 1), correct, total
 
 
 # ── main ─────────────────────────────────────────────────────────────────
@@ -309,15 +308,15 @@ def main():
         h2d_hist.append(h2d_s     * 1000.0)
         train_hist.append(train_s * 1000.0)
 
-        # print(
-        #     f"{shard_idx:>4} {os.path.basename(path):<20} "
-        #     f"{human_bytes(nbytes):>10} "
-        #     f"{wait_s*1000:>9.1f} {load_s*1000:>9.1f} "
-        #     f"{pin_s*1000:>8.1f} {h2d_s*1000:>8.1f} "
-        #     f"{train_s*1000:>9.1f} "
-        #     f"{avg_loss:>7.4f} {correct/max(n,1):>6.3f}",
-        #     flush=True,
-        # )
+        print(
+            f"{shard_idx:>4} {os.path.basename(path):<20} "
+            f"{human_bytes(nbytes):>10} "
+            f"{wait_s*1000:>9.1f} {load_s*1000:>9.1f} "
+            f"{pin_s*1000:>8.1f} {h2d_s*1000:>8.1f} "
+            f"{train_s*1000:>9.1f} "
+            f"{avg_loss:>7.4f} {correct/max(n,1):>6.3f}",
+            flush=True,
+        )
 
     wall = time.perf_counter() - t_run_start
 
